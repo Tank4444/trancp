@@ -1,16 +1,18 @@
 package forms;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import entity.Magazine;
 import entity.Program;
 import entity.Road;
 import entity.Store;
 
 import javax.swing.*;
+import javax.swing.border.MatteBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 
 public class mainForm extends JDialog {
@@ -19,20 +21,33 @@ public class mainForm extends JDialog {
     private JButton buttonCancel;
     private JButton addMag;
     private JButton addStore;
-    private JTextField storeField;
-    private JTextField magField;
     private JTable table;
     private DefaultTableModel model;
-    private Program program;
+    private String[][] array;
     JMenuBar jMenuBar = new JMenuBar();
     private  int columnCount;
+    private int columnName;
+    private int rowCount;
     private File workfile;
 
     public mainForm() {
         setContentPane(contentPane);
         setModal(true);
         getRootPane().setDefaultButton(buttonOK);
-        program = new Program();
+        table.setShowGrid(true);
+        table.setShowVerticalLines(true);
+        table.setShowHorizontalLines(true);
+        MatteBorder border = new MatteBorder(2,2,2,2,Color.green);
+        table.setBorder(border);
+        columnCount=1;
+        rowCount=1;
+        columnName=0;
+        array = new String[rowCount][columnCount];
+        array[rowCount-1][columnCount-1]= "<html>right - magazine;<br>down - store</html>";
+        model=new DefaultTableModel();
+
+        table.setModel(model);
+
         buttonOK.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 onOK();
@@ -121,12 +136,12 @@ public class mainForm extends JDialog {
                 if (userSelection == JFileChooser.APPROVE_OPTION) {
                     workfile = fileChooser.getSelectedFile();
                     try {
-                        program = program.loadFromFile(workfile);
+                        array = loadFromFile(workfile);
                         flash();
                     } catch (IOException e1) {
                         e1.printStackTrace();
                     }
-
+                    flash();
 
                 }
             }
@@ -154,7 +169,7 @@ public class mainForm extends JDialog {
                     workfile = fileChooser.getSelectedFile();
                     //save hear
                     updateData();
-                    program.saveInFile(workfile);
+                    saveInFile(workfile,array);
                 }
             }
         });
@@ -186,101 +201,96 @@ public class mainForm extends JDialog {
 
     private void addMagazine()
     {
-        if (!magField.getText().equals("")) {
-            Magazine magazine = new Magazine(magField.getText());
-            program.addMagazine(magazine);
-            for(Store store:program.getStores())
-            {
-                Road road = new Road(store,magazine,0);
-                if(!program.getRoads().contains(road))
-                {
-                    program.addRoad(road);
-                }
-            }
-            flash();
-        }
+        model.addColumn(columnName);
+        columnName++;
     }
 
     private void addStore()
     {
-        if(!storeField.getText().equals("")) {
-            Store store = new Store(storeField.getText());
-            program.addStore(store);
-            for(Magazine magazine:program.getMagazines())
-            {
-                Road road = new Road(store,magazine,0);
-                if(!program.getRoads().contains(road))
-                {
-                    program.addRoad(road);
-                }
-            }
-            flash();
-        }
+        model.addRow(new Object[]{""});
+        rowCount++;
     }
 
     private void flash()
     {
+
         model = new DefaultTableModel();
         table.setRowHeight(50);
+        for(int i=0;i<array[0].length;i++)
+        {
+            model.addColumn(String.valueOf(i));
+        }
+        for(int i=0;i<array.length;i++)
+        {
+            model.addRow(new Object[]{""});
+        }
+        for(int i=0;i<array.length;i++)
+        {
+            for(int j=0;j<array[0].length;j++)
+            {
+                model.setValueAt(array[i][j],i,j);
+            }
+        }
 
-        //outMag
-        columnCount=0;
-        model.addColumn(String.valueOf(columnCount));
-        columnCount++;
-        for (Magazine magazine:program.getMagazines())
-        {
-            model.addColumn(String.valueOf(columnCount));
-            columnCount++;
-        }
-        Object[] objects= new Object[columnCount];
-        objects[0]="<html>right - magazine;<br>down - store</html>";
-        for(int i = 0;i<columnCount;i++)
-        {
-            if(i==program.getMagazines().size())break;
-            objects[i+1] = String.valueOf(program.getMagazines().get(i).getValue()) ;
-        }
-        model.addRow(objects);
-        //outStoreAndRoad
-        for(Store store:program.getStores())
-        {
-            objects= new Object[columnCount];
-            objects[0]=String.valueOf(store.getValue());
-            ArrayList<Road> finded = new ArrayList<Road>();
-            int count =1;
-            for(int i=0;i<program.getRoads().size();i++)
-            {
-                if(count==columnCount)break;
-                if(program.getRoads().get(i).getStore().getValue()==store.getValue())
-                {
-                    objects[count] = program.getRoads().get(i).getValue();
-                    count++;
-                }
-            }
-            /*
-            for(Road road:program.getRoads()){
-                if(store.equals(road.getStore()))finded.add(road);
-            }
-            int count = 1;
-            for(Road road:finded)
-            {
-                objects[count] = road.getValue();
-            }
-            */
-            model.addRow(objects);
-        }
-        table.removeAll();
         table.setModel(model);
 
     }
 
     private void updateData()
     {
-        Program program = new Program();
+        array= new String[model.getRowCount()][model.getColumnCount()];
+        for(int i=0;i<model.getRowCount();i++)
+        {
+            for(int j=0;j<model.getColumnCount();j++)
+            {
+                array[i][j]=String.valueOf(model.getValueAt(i,j));
+            }
+        }
     }
     public static void main(String[] args) {
         mainForm dialog = new mainForm();
         dialog.pack();
         dialog.setVisible(true);
         System.exit(0);
+    }
+
+    public String[][] loadFromFile(File file) throws IOException {
+        //Этот спец. объект для построения строки
+        StringBuilder sb = new StringBuilder();
+        try {
+            //Объект для чтения файла в буфер
+            BufferedReader in = new BufferedReader(new FileReader( file.getAbsoluteFile()));
+            try {
+                //В цикле построчно считываем файл
+                String s;
+                while ((s = in.readLine()) != null) {
+                    sb.append(s);
+                }
+            } finally {
+                //Также не забываем закрыть файл
+                in.close();
+            }
+        } catch(IOException e) {
+            throw new RuntimeException(e);
+        }
+        ObjectMapper mapper = new ObjectMapper();
+        return (String[][]) mapper.readValue(sb.toString(),String[][].class);
+
+    }
+    public void saveInFile(File file,String[][] array)
+    {
+        //work with file
+        try {
+            PrintWriter writer = new PrintWriter(file.getAbsoluteFile());
+            ObjectMapper mapper = new ObjectMapper();
+            writer.print(mapper.writeValueAsString(array));
+            writer.close();
+        } catch (FileNotFoundException e2) {
+            e2.printStackTrace();
+        } catch (JsonProcessingException e2) {
+            e2.printStackTrace();
+        }
+
+
     }
 }
