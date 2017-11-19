@@ -14,6 +14,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 public class mainForm extends JDialog {
     private JPanel contentPane;
@@ -83,11 +85,6 @@ public class mainForm extends JDialog {
         addStore.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 addStore();
-            }
-        });
-        buttonOK.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                onOK();
             }
         });
 
@@ -190,7 +187,111 @@ public class mainForm extends JDialog {
     private void onOK()
     {
         // add your code here
-        dispose();
+        updateData();
+        int storesMas=0;
+        for(int i=1;i<array.length;i++) {
+            storesMas+=Integer.parseInt(array[i][0]);
+        }
+        int magazineMas=0;
+        for(int i=1;i<array[0].length;i++) {
+            magazineMas+=Integer.parseInt(array[0][i]);
+        }
+        String res="<html>";
+
+        res+="Stores = "+String.valueOf(storesMas)+"<br>";
+        res+="Magazine = "+String.valueOf(magazineMas)+"<br>";
+        if (storesMas != magazineMas) {
+            res+="Транспортная задача открытая<br>";
+            res+="</html>";
+            JOptionPane.showMessageDialog(null,res);
+            return;
+        }
+        res+="Транспортная задача закрытая<br>";
+        res+="</html>";
+        JOptionPane.showMessageDialog(null,res);
+
+        int[][] workarray = new int[array.length][array[0].length];
+        for(int i=0;i<array[0].length;i++)
+        {
+            for (int j=0;j<array.length;j++)
+            {
+                if((i==0)&&(j==0)) workarray[i][j]=0;
+                else workarray[i][j]=Integer.parseInt(array[i][j]);
+            }
+        }
+        ArrayList<Coordinate> allCoordinate = new ArrayList<Coordinate>();
+        for(int i=1;i<array.length;i++)
+        {
+            for (int j=1;j<array[0].length;j++)
+            {
+                allCoordinate.add(new Coordinate(j,i,workarray[i][j]));
+            }
+        }
+        /*
+            Collections.sort(allCoordinate, new Comparator<Coordinate>() {
+                public int compare(Coordinate o1, Coordinate o2) {
+                    if(o1.y>o2.y)return 1;
+                    else return -1;
+                }
+            });
+            Collections.sort(allCoordinate, new Comparator<Coordinate>() {
+                public int compare(Coordinate o1, Coordinate o2) {
+                    if(o1.x>o2.x)return 1;
+                    else return -1;
+                }
+            });
+            Collections.sort(allCoordinate, new Comparator<Coordinate>() {
+                public int compare(Coordinate o1, Coordinate o2) {
+                    if(o1.cost>o2.cost)return 1;
+                    else return -1;
+                }
+            });
+         */
+
+        res="<html>Результат(ячейки)<br>";
+        while ((storesMas != 0) && (magazineMas != 0)) {
+
+
+            Coordinate coordinate = allCoordinate.get(0);
+
+            for(Coordinate coordinate1:allCoordinate)
+            {
+                if(coordinate.cost>coordinate1.cost)coordinate=coordinate1;
+            }
+            if(!((workarray[0][coordinate.x]==0)||(workarray[coordinate.y][0]==0)))
+            {
+                if (workarray[0][coordinate.x] > workarray[coordinate.y][0]) {
+
+                    workarray[0][coordinate.x] -= workarray[coordinate.y][0];
+                    workarray[coordinate.y][0] = 0;
+
+                } else if (workarray[0][coordinate.y] == workarray[coordinate.x][0]) {
+                    workarray[coordinate.x][0] = 0;
+                    workarray[0][coordinate.y] = 0;
+                } else {
+
+                    workarray[coordinate.y][0] -= workarray[0][coordinate.x];
+                    workarray[0][coordinate.x] = 0;
+
+                }
+                res += "x = " + coordinate.y + " y = " + coordinate.x + " cost = " + coordinate.cost + "<br>";
+
+                storesMas = 0;
+                for (int i = 1; i < array.length; i++) {
+                    storesMas += workarray[i][0];
+                }
+                magazineMas = 0;
+                for (int i = 1; i < array[0].length; i++) {
+                    magazineMas += workarray[0][i];
+                }
+            }
+            allCoordinate.remove(coordinate);
+
+        }
+        res+="</html>";
+        JOptionPane.showMessageDialog(null,res);
+
+
     }
 
     private void onCancel()
@@ -292,5 +393,14 @@ public class mainForm extends JDialog {
         }
 
 
+    }
+
+    private class Coordinate {
+        int x,y,cost;
+        Coordinate(int x,int y,int cost) {
+            this.x=x;
+            this.y=y;
+            this.cost=cost;
+        }
     }
 }
