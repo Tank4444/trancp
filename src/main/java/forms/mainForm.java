@@ -211,9 +211,9 @@ public class mainForm extends JDialog {
         JOptionPane.showMessageDialog(null,res);
 
         int[][] workarray = new int[array.length][array[0].length];
-        for(int i=0;i<array[0].length;i++)
+        for(int i=0;i<array.length;i++)
         {
-            for (int j=0;j<array.length;j++)
+            for (int j=0;j<array[0].length;j++)
             {
                 if((i==0)&&(j==0)) workarray[i][j]=0;
                 else workarray[i][j]=Integer.parseInt(array[i][j]);
@@ -238,50 +238,17 @@ public class mainForm extends JDialog {
 
         res="<html>Результат(ячейки)<br>";
 
+        int [][] result = new int[workarray.length+1][workarray[0].length+1];
+        for(int i=0;i<workarray.length;i++)
+        {
+            result[i][0]=workarray[i][0];
+        }
+        for(int i=0;i<workarray[0].length;i++)
+        {
+            result[0][i]=workarray[0][i];
+        }
 
-        /*
-            while ((storesMas != 0) && (magazineMas != 0)) {
 
-
-                Coordinate coordinate = allCoordinate.get(0);
-
-                for(Coordinate coordinate1:allCoordinate)
-                {
-                    if(coordinate.cost>coordinate1.cost)coordinate=coordinate1;
-                }
-                if(!((workarray[0][coordinate.x]==0)||(workarray[coordinate.y][0]==0)))
-                {
-                    if (workarray[0][coordinate.x] > workarray[coordinate.y][0]) {
-
-                        workarray[0][coordinate.x] -= workarray[coordinate.y][0];
-                        workarray[coordinate.y][0] = 0;
-
-                    } else if (workarray[0][coordinate.y] == workarray[coordinate.x][0]) {
-                        workarray[coordinate.x][0] = 0;
-                        workarray[0][coordinate.y] = 0;
-                    } else {
-
-                        workarray[coordinate.y][0] -= workarray[0][coordinate.x];
-                        workarray[0][coordinate.x] = 0;
-
-                    }
-                    res += "x = " + coordinate.y + " y = " + coordinate.x + " cost = " + coordinate.cost + "<br>";
-
-                    storesMas = 0;
-                    for (int i = 1; i < array.length; i++) {
-                        storesMas += workarray[i][0];
-                    }
-                    magazineMas = 0;
-                    for (int i = 1; i < array[0].length; i++) {
-                        magazineMas += workarray[0][i];
-                    }
-                }
-                allCoordinate.remove(coordinate);
-
-            }
-            res+="</html>";
-            JOptionPane.showMessageDialog(null,res);
-        */
         while (!allCoordinate.isEmpty())
         {
             int x = allCoordinate.get(0).x;
@@ -315,6 +282,7 @@ public class mainForm extends JDialog {
                 workarray[0][x] = 0;
             }
             res += "x = " + x + " y = " + y + " cost = " + allCoordinate.get(0).cost + "<br>";
+            result[y][x]=allCoordinate.get(0).cost;
             allCoordinate.remove(0);
         }
         storesMas = 0;
@@ -326,8 +294,73 @@ public class mainForm extends JDialog {
             magazineMas += workarray[0][i];
         }
         res+="stor = "+storesMas+" mag = "+magazineMas+"</html>";
-        JOptionPane.showMessageDialog(null,res);
+        //JOptionPane.showMessageDialog(null,res);
+        int[][] patiences = new int [result.length][result[0].length];
+        int columnPatiens = result.length-1;
+        for(int i=1;i<patiences[columnPatiens].length;i++)patiences[patiences.length-1][i]=-1;
+        for(int i=1;i<patiences.length;i++)patiences[i][patiences[i].length-1]=-1;
+        patiences[1][patiences[1].length-1]=0;
 
+
+        /*
+        int columnCheck=1;
+        for(int i=2;i<result[0].length;i++)
+        {
+            if(result[1][i]>0)
+            {
+                columnCheck=i;
+            }
+        }
+        //[i][j] i - row, j - column.
+        //Ui + Vj = (Cij-cast)
+        //for column
+        patiences[patiences[0].length-1][columnCheck]=result[1][columnCheck]-patiences[1][patiences[1].length-1];
+        */
+        int allU=0;
+        int allV=0;
+        for(int i=1;i<patiences.length-1;i++)
+        {
+            allU+=patiences[i][patiences[i].length-1];
+        }
+        for(int i=1;i<patiences[0].length-1;i++)
+        {
+            allV+=patiences[patiences[patiences.length-1].length-1][i];
+        }
+
+
+        while ((allU<0)&&(allV<0))
+         {
+
+            for(int i=1;i<patiences.length-1;i++)
+            {
+                for(int j = 1;j<patiences[0].length-1;j++)
+                {
+                    if(result[i][j]>0)
+                    {
+                        if((patiences[i][patiences[i].length-1]<0)||(patiences[patiences.length-1][j]<0))
+                        {
+                            if(patiences[i][patiences[i].length-1]>-1)
+                            {
+                                patiences[patiences.length-1][j]=result[i][j]-result[i][patiences[i].length-1];
+                            } else patiences[i][patiences[i].length-1]=result[i][j]-result[patiences.length-1][j];
+
+                        }
+                    }
+                }
+            }
+            allU=0;
+            allV=0;
+            for(int i=1;i<patiences.length-1;i++)
+            {
+                allU+=patiences[i][patiences[i].length-1];
+            }
+            for(int i=1;i<patiences[0].length-1;i++)
+            {
+                allV+=patiences[patiences[patiences.length-1].length-1][i];
+            }
+        }
+        //ΔCij = Cij – (Ui + Vj )
+        int i=0;
     }
 
     private void onCancel()
