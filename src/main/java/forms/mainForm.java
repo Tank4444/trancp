@@ -2,10 +2,6 @@ package forms;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import entity.Magazine;
-import entity.Program;
-import entity.Road;
-import entity.Store;
 
 import javax.swing.*;
 import javax.swing.border.MatteBorder;
@@ -31,6 +27,10 @@ public class mainForm extends JDialog {
     private int columnName;
     private int rowCount;
     private File workfile;
+    private int[][] freeCell;
+    private int[][] Cickle;
+    int [][] raspred;
+    int [][] result;
 
     public mainForm() {
         setContentPane(contentPane);
@@ -238,7 +238,8 @@ public class mainForm extends JDialog {
 
         res="<html>Результат(ячейки)<br>";
 
-        int [][] result = new int[workarray.length+1][workarray[0].length+1];
+        result = new int[workarray.length+1][workarray[0].length+1];
+        raspred = new int[workarray.length+1][workarray[0].length+1];
         for(int i=0;i<workarray.length;i++)
         {
             result[i][0]=workarray[i][0];
@@ -265,12 +266,15 @@ public class mainForm extends JDialog {
                 //if mag > stor
                 //mag - stor
                 //stor = 0
+                raspred[y][x]=workarray[y][0];
                 workarray[0][x]-=workarray[y][0];
                 workarray[y][0] = 0;
+
             }else if(workarray[0][x]==workarray[y][0])
             {
 
                 //if mag = stor both 0
+                raspred[y][x]=workarray[y][0];
                 workarray[0][x]=0;
                 workarray[y][0]=0;
             }else
@@ -278,6 +282,7 @@ public class mainForm extends JDialog {
                 //if stor > mag
                 //stor - mag
                 //mag = 0
+                raspred[y][x]=workarray[0][x];
                 workarray[y][0]-=workarray[0][x];
                 workarray[0][x] = 0;
             }
@@ -316,6 +321,7 @@ public class mainForm extends JDialog {
         //for column
         patiences[patiences[0].length-1][columnCheck]=result[1][columnCheck]-patiences[1][patiences[1].length-1];
         */
+
         int allU=0;
         int allV=0;
         for(int i=1;i<patiences.length-1;i++)
@@ -328,7 +334,7 @@ public class mainForm extends JDialog {
         }
 
 
-        while ((allU<0)&&(allV<0))
+        while ((allU<0)||(allV<0))
          {
 
             for(int i=1;i<patiences.length-1;i++)
@@ -337,14 +343,8 @@ public class mainForm extends JDialog {
                 {
                     if(result[i][j]>0)
                     {
-                        if((patiences[i][patiences[i].length-1]<0)||(patiences[patiences.length-1][j]<0))
-                        {
-                            if(patiences[i][patiences[i].length-1]>-1)
-                            {
-                                patiences[patiences.length-1][j]=result[i][j]-result[i][patiences[i].length-1];
-                            } else patiences[i][patiences[i].length-1]=result[i][j]-result[patiences.length-1][j];
-
-                        }
+                        if(patiences[i][patiences[i].length-1]>-1) patiences[patiences.length-1][j]=result[i][j]-patiences[i][patiences[i].length-1];
+                        if(patiences[patiences.length-1][j]>-1) patiences[i][patiences[i].length-1]=result[i][j]-patiences[patiences.length-1][j];
                     }
                 }
             }
@@ -359,8 +359,59 @@ public class mainForm extends JDialog {
                 allV+=patiences[patiences[patiences.length-1].length-1][i];
             }
         }
+        //считаем свободные
         //ΔCij = Cij – (Ui + Vj )
+        freeCell = new int [result.length][result[0].length];
+        for(int i=1;i<patiences.length-1;i++) {
+            for (int j = 1; j < patiences[0].length - 1; j++) {
+                if (raspred[i][j] == 0) {
+                    freeCell[i][j]= workarray[i][j]-(patiences[i][patiences[i].length-1]+patiences[patiences.length-1][j]);
+                }
+            }
+        }
+        int check =0;
+        for(int i=1;i<patiences.length-1;i++)for (int j = 1; j < patiences[0].length - 1; j++)if (freeCell[i][j] < 0) check=1;
+        while(check!=0)
+        {
+
+            int minx=1,miny=1;
+            for(int i=1;i<patiences.length-1;i++)
+                for (int j = 1; j < patiences[0].length - 1; j++)
+                    if (freeCell[i][j] < freeCell[minx][miny])
+                    {
+                        minx=i;
+                        miny=j;
+                    };
+            //find cikl
+            int[][] path=new int [result.length][result[0].length];
+            path[minx][miny]=1;
+            Cickle = new int [result.length][result[0].length];
+            if (path[minx + 1][miny] != 1) dfs(minx + 1, miny, path,minx, miny);
+            if (path[minx - 1][miny] != 1) dfs(minx - 1, miny, path, minx, miny);
+            if (path[minx][miny + 1] != 1) dfs(minx, miny + 1, path, minx, miny);
+            if (path[minx][miny - 1] != 1) dfs(minx, miny - 1, path, minx, miny);
+            for(int i=1;i<patiences.length-1;i++)for (int j = 1; j < patiences[0].length - 1; j++)if (freeCell[i][j] < 0) check=1;
+        }
         int i=0;
+    }
+    private void dfs(int x,int y,int[][] path,int loopx,int loopy)
+    {
+        if((x==loopx)&&(y==loopy)) {
+            for(int i=1;i<result.length-1;i++)for (int j = 1; j < result[0].length - 1; j++)Cickle[i][j]=path[i][j];
+            return;
+        }
+        if((raspred[x][y]>0)&&(path[x][y]==0)) {
+                path[x][y] = 1;
+            int[][] newPath=new int[result.length][result[0].length];
+            for(int i=1;i<result.length-1;i++)for (int j = 1; j < result[0].length - 1; j++)newPath[i][j]=path[i][j];
+
+            if(x+1<newPath.length)dfs(x + 1, y, newPath, loopx, loopy);
+            if(x-1<newPath.length)dfs(x - 1, y, newPath, loopx, loopy);
+            if(y+1<newPath[0].length)dfs(x, y + 1, newPath, loopx, loopy);
+            if(y-1<newPath[0].length)dfs(x, y - 1, newPath, loopx, loopy);
+        }
+
+
     }
 
     private void onCancel()
