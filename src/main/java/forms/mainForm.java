@@ -22,15 +22,19 @@ public class mainForm extends JDialog {
     private JTable table;
     private DefaultTableModel model;
     private String[][] array;
-    JMenuBar jMenuBar = new JMenuBar();
+    private JMenuBar jMenuBar = new JMenuBar();
     private  int columnCount;
     private int columnName;
     private int rowCount;
     private File workfile;
     private int[][] freeCell;
     private int[][] Cickle;
-    int [][] raspred;
-    int [][] result;
+    private int [][] raspred;
+    private int [][] result;
+    private int [][] znaki;
+
+    int check=0;
+    private int[][] newPath;
 
     public mainForm() {
         setContentPane(contentPane);
@@ -371,7 +375,7 @@ public class mainForm extends JDialog {
         }
         int check =0;
         for(int i=1;i<patiences.length-1;i++)for (int j = 1; j < patiences[0].length - 1; j++)if (freeCell[i][j] < 0) check=1;
-        while(check!=0)
+        while(check==1)
         {
 
             int minx=1,miny=1;
@@ -384,36 +388,141 @@ public class mainForm extends JDialog {
                     };
             //find cikl
             int[][] path=new int [result.length][result[0].length];
-            path[minx][miny]=1;
             Cickle = new int [result.length][result[0].length];
-            if (path[minx + 1][miny] != 1) dfs(minx + 1, miny, path,minx, miny);
-            if (path[minx - 1][miny] != 1) dfs(minx - 1, miny, path, minx, miny);
-            if (path[minx][miny + 1] != 1) dfs(minx, miny + 1, path, minx, miny);
-            if (path[minx][miny - 1] != 1) dfs(minx, miny - 1, path, minx, miny);
+            znaki = new int [result.length][result[0].length];
+            path[minx][miny]=1;
+            znaki[minx][miny]=1;
+            for(int i=1;i<raspred[0].length-1;i++)
+            {
+                if(i==miny)continue;
+                dfs(minx,i,copyArray(path),minx,miny,1,copyArray(znaki),-1);
+
+            }
+
+            int znach=0;
+            for (int i=0;i<array.length;i++)
+                for (int j=0;j<array[i].length;j++)
+                {
+                    if(Cickle[i][j]>0) {
+                        if ((i == minx) && (j == miny))continue;
+                        if(znach==0)znach=raspred[i][j];
+                        else if(znach>raspred[i][j])znach=raspred[i][j];
+                    }
+                }
+            for (int i=0;i<array.length;i++)
+                for (int j=0;j<array[i].length;j++)
+                {
+                    if(Cickle[i][j]>0) {
+                        if(znaki[i][j]>0)raspred[i][j]+=znach;
+                        else raspred[i][j]-=znach;
+                    }
+                }
+            patiences = new int [result.length][result[0].length];
+            columnPatiens = result.length-1;
+            for(int i=1;i<patiences[columnPatiens].length;i++)patiences[patiences.length-1][i]=-1;
+            for(int i=1;i<patiences.length;i++)patiences[i][patiences[i].length-1]=-1;
+            patiences[1][patiences[1].length-1]=0;
+            allU=0;
+            allV=0;
+            for(int i=1;i<patiences.length-1;i++)
+            {
+                allU+=patiences[i][patiences[i].length-1];
+            }
+            for(int i=1;i<patiences[0].length-1;i++)
+            {
+                allV+=patiences[patiences[patiences.length-1].length-1][i];
+            }
+
+            while ((allU<0)||(allV<0))
+            {
+
+                for(int i=1;i<patiences.length-1;i++)
+                {
+                    for(int j = 1;j<patiences[0].length-1;j++)
+                    {
+                        if(result[i][j]>0)
+                        {
+                            if(patiences[i][patiences[i].length-1]>-1) patiences[patiences.length-1][j]=result[i][j]-patiences[i][patiences[i].length-1];
+                            if(patiences[patiences.length-1][j]>-1) patiences[i][patiences[i].length-1]=result[i][j]-patiences[patiences.length-1][j];
+                        }
+                    }
+                }
+                allU=0;
+                allV=0;
+                for(int i=1;i<patiences.length-1;i++)
+                {
+                    allU+=patiences[i][patiences[i].length-1];
+                }
+                for(int i=1;i<patiences[0].length-1;i++)
+                {
+                    allV+=patiences[patiences[patiences.length-1].length-1][i];
+                }
+            }
+            freeCell = new int [result.length][result[0].length];
+
+                //find pot
+            for(int i=1;i<patiences.length-1;i++) {
+                for (int j = 1; j < patiences[0].length - 1; j++) {
+
+                        freeCell[i][j]= workarray[i][j]-(patiences[i][patiences[i].length-1]+patiences[patiences.length-1][j]);
+
+                }
+            }
             for(int i=1;i<patiences.length-1;i++)for (int j = 1; j < patiences[0].length - 1; j++)if (freeCell[i][j] < 0) check=1;
+
         }
         int i=0;
     }
-    private void dfs(int x,int y,int[][] path,int loopx,int loopy)
+    private void dfs(int x,int y,int[][] path,int loopx,int loopy,int dir,int[][] znak, int zn)
     {
-        if((x==loopx)&&(y==loopy)) {
-            for(int i=1;i<result.length-1;i++)for (int j = 1; j < result[0].length - 1; j++)Cickle[i][j]=path[i][j];
+        if((x==loopx)&&(y==loopy))
+        {
+            Cickle=copyArray(path);
+            znaki=copyArray(znak);
             return;
         }
-        if((raspred[x][y]>0)&&(path[x][y]==0)) {
-                path[x][y] = 1;
-            int[][] newPath=new int[result.length][result[0].length];
-            for(int i=1;i<result.length-1;i++)for (int j = 1; j < result[0].length - 1; j++)newPath[i][j]=path[i][j];
 
-            if(x+1<newPath.length)dfs(x + 1, y, newPath, loopx, loopy);
-            if(x-1<newPath.length)dfs(x - 1, y, newPath, loopx, loopy);
-            if(y+1<newPath[0].length)dfs(x, y + 1, newPath, loopx, loopy);
-            if(y-1<newPath[0].length)dfs(x, y - 1, newPath, loopx, loopy);
+        if(path[x][y]==0)
+        {
+            if(raspred[x][y]!=0)
+            {
+                path[x][y]=1;
+                if(zn>0)znak[x][y]=1;
+                else znak[x][y]=-1;
+                zn=recers(zn);
+                if(dir%2==0)
+                {
+                    dir++;
+                    for(int i=1;i<raspred[0].length-1;i++)
+                    {
+                        dfs(x,i,copyArray(path),loopx,loopy,dir,copyArray(znak),zn);
+                    }
+                }else
+                {
+                    dir++;
+                    for (int i=1;i<raspred.length-1;i++)
+                    {
+                        newPath=copyArray(path);
+                        dfs(i,y,copyArray(path),loopx,loopy,dir,copyArray(znak),zn);
+                    }
+                }
+            }
         }
-
 
     }
 
+    private int recers(int zn)
+    {
+        if(zn>0)return -1;
+        else return 1;
+    }
+    private int[][] copyArray(int[][] array)
+    {
+        int[][] result =new  int[array.length][array[0].length];
+        for (int i=0;i<array.length;i++)
+            for (int j=0;j<array[i].length;j++)result[i][j]=array[i][j];
+        return result;
+    }
     private void onCancel()
     {
         // add your code here if necessary
